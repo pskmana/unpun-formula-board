@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UNPUN Formula Tracker</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    :root {
+      --bg: #f7f7f4;
+      --surface: #fff;
+      --text: #151515;
+      --muted: #6f6b64;
+      --line: #e5e1d9;
+      --danger: #cf3f3a;
+      --wait: #8d8a83;
+      --work: #c89014;
+      --test: #2f74b5;
+      --approve: #7654aa;
+      --done: #238451;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); margin: 0; }
+    button, input, select, textarea { font: inherit; }
+    button, input, select, textarea {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      min-height: 36px;
+      padding: 7px 10px;
+    }
+    button { background: var(--surface); cursor: pointer; font-weight: 800; }
+    textarea { min-height: 76px; resize: vertical; }
+    .primary { background: var(--text); color: #fff; }
+    .danger { color: var(--danger); }
+    .screen {
+      display: grid;
+      gap: 12px;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: 100vh;
+      padding: 14px;
+    }
+    header { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
+    h1 { font-size: clamp(24px, 4vw, 40px); line-height: 1; margin: 0; text-transform: uppercase; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .board { display: grid; gap: 10px; grid-template-columns: repeat(5, minmax(260px, 1fr)); min-height: 0; overflow: auto; }
+    .column {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-height: 0;
+      padding: 10px;
+    }
+    .column h2 { align-items: center; display: flex; font-size: 15px; justify-content: space-between; margin: 0 0 8px; }
+    .drop { display: grid; gap: 8px; overflow-y: auto; padding: 2px; }
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-left: 7px solid var(--stage-color);
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      min-height: 96px;
+      padding: 10px;
+      width: 100%;
+    }
+    .card[draggable="true"] { cursor: grab; }
+    .topline { align-items: center; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) auto; width: 100%; }
+    .project-id { color: var(--muted); font-size: 12px; font-weight: 900; }
+    .client {
+      font-size: 17px;
+      font-weight: 900;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .days {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1.2;
+      max-width: 120px;
+      overflow: hidden;
+      text-align: right;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .badge {
+      background: color-mix(in srgb, var(--stage-color), white 85%);
+      border-radius: 999px;
+      color: var(--stage-color);
+      font-size: 12px;
+      font-weight: 900;
+      padding: 4px 8px;
+      width: fit-content;
+    }
+    .brief { color: #33312e; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+    .brief-list { display: grid; gap: 7px; margin: 0; padding-left: 18px; }
+    .brief-list li { line-height: 1.35; }
+    .brief-title { color: var(--muted); font-size: 12px; font-weight: 900; }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      margin: 12vh auto 0;
+      max-width: 420px;
+      padding: 16px;
+    }
+    .grid { display: grid; gap: 8px; }
+    .form-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
+    label { color: var(--muted); display: grid; font-size: 12px; gap: 4px; }
+    dialog {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      max-width: min(900px, calc(100vw - 24px));
+      width: 760px;
+    }
+    dialog::backdrop { background: rgb(0 0 0 / .22); }
+    .dialog-head { align-items: center; display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .tab { display: none; }
+    .tab.active { display: grid; gap: 10px; }
+    .log-form { display: grid; gap: 6px; grid-template-columns: 130px minmax(0, 1fr) minmax(0, 160px) auto; }
+    .timeline { display: grid; gap: 6px; margin-top: 8px; }
+    .log-item, .request {
+      border-left: 3px solid var(--stage-color, var(--line));
+      padding-left: 8px;
+    }
+    .hidden { display: none !important; }
+    @media (max-width: 760px) {
+      .screen { height: auto; min-height: 100vh; }
+      header { align-items: stretch; flex-direction: column; }
+      .actions { justify-content: flex-start; }
+      .board, .form-grid, .log-form { grid-template-columns: 1fr; }
+      .drop { overflow: visible; }
+    }
+  </style>
+</head>
+<body>
+  <section id="loginScreen" class="panel">
+    <form id="loginForm" class="grid">
+      <h1>UNPUN</h1>
+      <div class="muted" id="loginHint">เข้าสู่ระบบเพื่อดูข้อมูลโปรเจค</div>
+      <label>Username<input id="loginUsername" required autocomplete="username"></label>
+      <label>Password<input id="loginPassword" type="password" required autocomplete="current-password"></label>
+      <button class="primary" type="submit">เข้าสู่ระบบ</button>
+    </form>
+    <form id="customerLookupForm" class="grid" style="margin-top:16px">
+      <div class="muted">ลูกค้าตรวจ progress ด้วยเบอร์โทรที่ลงทะเบียนไว้</div>
+      <label>เบอร์โทร<input id="lookupPhone" inputmode="tel" placeholder="0998213209"></label>
+      <button type="submit">ดู Progress</button>
+    </form>
+  </section>
+
+  <main id="app" class="screen hidden">
+    <header>
+      <div>
+        <h1>UNPUN Formula Tracker</h1>
+        <div class="muted" id="userLine"></div>
+      </div>
+      <div class="actions">
+        <button type="button" id="manageBtn">จัดการ</button>
+      </div>
+    </header>
+    <section id="board" class="board"></section>
+  </main>
+
+  <dialog id="manageDialog">
+    <div class="dialog-head">
+      <strong>จัดการ</strong>
+      <button type="button" onclick="manageDialog.close()">ปิด</button>
+    </div>
+    <div class="tabs">
+      <button id="projectTabBtn" type="button" onclick="showTab('projectTab')">โปรเจค</button>
+      <button id="userTabBtn" type="button" onclick="showTab('userTab')">ลูกค้า / User</button>
+      <button id="approvalTabBtn" type="button" onclick="showTab('approvalTab')">Approve</button>
+      <button id="accountTabBtn" type="button" onclick="showTab('accountTab')">บัญชี</button>
+      <button type="button" onclick="logout()">ออกจากระบบ</button>
+    </div>
+    <section id="projectTab" class="tab active">
+      <form id="projectForm" class="form-grid">
+        <label>Project ID<input id="projectId" required placeholder="UP-2026-001"></label>
+        <label>ชื่อโปรเจค<input id="projectName" required placeholder="ชื่อโปรเจค / สูตร"></label>
+        <label>ลูกค้า<input id="clientName" required></label>
+        <label>ชื่อผู้ติดต่อ<input id="contactName"></label>
+        <label>เบอร์โทร<input id="customerPhone" required></label>
+        <label>ที่อยู่<input id="customerAddress"></label>
+        <label>Owner RD<input id="owner"></label>
+        <label>วันที่รับงาน<input id="dateReceived" type="date" required></label>
+        <label>Due date<input id="dueDate" type="date" required></label>
+        <label>Stage<select id="stage"></select></label>
+        <label>MOQ<input id="briefMoq" placeholder="เช่น 1,000 ชิ้น"></label>
+        <label>งบประมาณ<input id="briefBudget" placeholder="เช่น 35,000 บาท"></label>
+        <label>Product size<input id="briefSize" placeholder="เช่น 300 กรัม"></label>
+        <label>สัมผัสภายนอก<textarea id="briefTexture"></textarea></label>
+        <label>กลิ่น<textarea id="briefScent"></textarea></label>
+        <label>สี<textarea id="briefColor"></textarea></label>
+        <label>สารสกัด<textarea id="briefExtracts"></textarea></label>
+        <label>ข้อห้าม / สิ่งที่หลีกเลี่ยง<textarea id="briefAvoid"></textarea></label>
+        <label>คอนเซปผลิตภัณฑ์<textarea id="briefConcept"></textarea></label>
+        <label>บรีฟเพิ่มเติม<textarea id="brief"></textarea></label>
+        <button type="button" onclick="resetProjectForm()">ล้าง</button>
+        <button class="primary" type="submit">บันทึกโปรเจค</button>
+      </form>
+    </section>
+    <section id="userTab" class="tab">
+      <form id="userForm" class="form-grid">
+        <label>Username<input id="newUsername" required></label>
+        <label>Password<input id="newPassword" type="password" required></label>
+        <label>Role<select id="newRole">
+          <option value="CS">CS</option>
+          <option value="RD">RD</option>
+          <option value="MM">MM</option>
+          <option value="MD">MD</option>
+        </select></label>
+        <label>ชื่อจริงอังกฤษ<input id="newFirstName" placeholder="Pongsakorn"></label>
+        <label>อักษรแรกนามสกุล<input id="newLastInitial" maxlength="1" placeholder="M"></label>
+        <label>เบอร์โทร<input id="newCustomerPhone" placeholder="0998213209"></label>
+        <button type="button" onclick="generateUser()">Generate</button>
+        <button class="primary" type="submit">สร้าง / อัปเดต User</button>
+      </form>
+      <div id="userList" class="timeline"></div>
+    </section>
+    <section id="approvalTab" class="tab">
+      <div id="approvalList" class="timeline"></div>
+    </section>
+    <section id="accountTab" class="tab">
+      <div id="accountInfo" class="muted"></div>
+    </section>
+  </dialog>
+
+  <dialog id="detailDialog"></dialog>
+
+  <script>
+    const API_URL = "";
+    const LIFF_ID = "2010490215-3QA1FCUe";
+    const stages = ["รับโจทย์", "พัฒนาสูตร", "รออนุมัติ", "ส่งมอบ", "สิ้นสุดโปรเจค"];
+    const stageColors = {
+      "รับโจทย์": "var(--wait)",
+      "พัฒนาสูตร": "var(--work)",
+      "รออนุมัติ": "var(--approve)",
+      "ส่งมอบ": "var(--test)",
+      "สิ้นสุดโปรเจค": "var(--done)"
+    };
+    const storageKey = "unpun-formula-projects-v2";
+    const oldStorageKey = "unpun-formula-projects-v1";
+    const userKey = "unpun-formula-users-v1";
+    const sessionKey = "unpun-formula-session";
+    const liffPhoneKey = "unpun-liff-customer-phone";
+    const $ = (id) => document.getElementById(id);
+    const today = () => new Date(new Date().toDateString());
+    const iso = (date) => date.toISOString().slice(0, 10);
+    let currentUser = JSON.parse(sessionStorage.getItem(sessionKey) || "null");
+    let liffProfile = null;
+    let projects = normalizeProjects(JSON.parse(localStorage.getItem(storageKey) || localStorage.getItem(oldStorageKey) || "[]"));
+    let users = JSON.parse(localStorage.getItem(userKey) || "[]");
+    const briefFields = [
+      ["BriefMoq", "MOQ"],
+      ["BriefBudget", "งบประมาณ"],
+      ["BriefSize", "Product size"],
+      ["BriefTexture", "สัมผัสภายนอก"],
+      ["BriefScent", "กลิ่น"],
+      ["BriefColor", "สี"],
+      ["BriefExtracts", "สารสกัด"],
+      ["BriefAvoid", "ข้อห้าม / สิ่งที่หลีกเลี่ยง"],
+      ["BriefConcept", "คอนเซปผลิตภัณฑ์"],
+      ["Brief", "บรีฟเพิ่มเติม"]
+    ];
+
+    function canManageProjects() { return ["MM", "MD"].includes(currentUser?.Role); }
+    function canManageUsers() { return ["RD", "MM", "MD"].includes(currentUser?.Role); }
+    function canLog() { return ["RD", "MM"].includes(currentUser?.Role); }
+    function canDragTo(stage) {
+      if (!currentUser) return false;
+      if (currentUser.Role === "RD") return stage !== "สิ้นสุดโปรเจค";
+      if (currentUser.Role === "MM") return stage !== "สิ้นสุดโปรเจค";
+      if (currentUser.Role === "MD") return stage === "สิ้นสุดโปรเจค";
+      return false;
+    }
+    function canApprove(request) {
+      return (currentUser?.Role === "MM" && request.ToStage !== "สิ้นสุดโปรเจค")
+        || (currentUser?.Role === "MD" && request.ToStage === "สิ้นสุดโปรเจค");
+    }
+
+    function normalizeRole(role) {
+      return ({ customer: "CUSTOMER", rd: "RD", manager: "MM", md: "MD" }[role] || role || "").toUpperCase();
+    }
+
+    function normalizeUser(user) {
+      return user ? { ...user, Role: normalizeRole(user.Role) } : user;
+    }
+    currentUser = normalizeUser(currentUser);
+    users = users.map(normalizeUser);
+
+    async function sha256(text) {
+      const bytes = new TextEncoder().encode(text);
+      const hash = await crypto.subtle.digest("SHA-256", bytes);
+      return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function api(action, payload = {}) {
+      if (!API_URL) return null;
+      const auth = currentUser && action !== "customerLookup" ? { AuthUsername: currentUser.Username, AuthPasswordHash: currentUser.PasswordHash } : {};
+      const options = { method: "POST", body: JSON.stringify({ action, ...payload, ...auth }) };
+      const res = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`, options);
+      if (!res.ok) throw new Error(action);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      return data;
+    }
+
+    async function initLiff() {
+      if (!LIFF_ID || !window.liff) return;
+      $("loginHint").textContent = "กำลังเชื่อมต่อ LINE OA";
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+        liffProfile = await liff.getProfile().catch(() => null);
+        if (liffProfile?.displayName && !currentUser) {
+          $("loginHint").textContent = `เปิดผ่าน LINE: ${liffProfile.displayName}`;
+        }
+        const phone = normalizePhone(new URLSearchParams(location.search).get("phone")) || localStorage.getItem(liffPhoneKey);
+        if (!currentUser && phone) {
+          $("lookupPhone").value = phone;
+          await lookupCustomer(phone, true);
+        }
+      } catch (error) {
+        $("loginHint").textContent = "เปิดผ่าน LINE ได้ แต่ยังเชื่อม LIFF ไม่สำเร็จ";
+      }
+    }
+
+    function normalizeProjects(rows) {
+      return rows.map((row) => ({
+        ProjectID: row.ProjectID || "",
+        ProjectName: row.ProjectName || row.projectName || row.Brief || "",
+        ClientName: row.ClientName || "",
+        ContactName: row.ContactName || "",
+        CustomerAddress: row.CustomerAddress || "",
+        CustomerPhone: row.CustomerPhone || "",
+        BriefMoq: row.BriefMoq || "",
+        BriefBudget: row.BriefBudget || "",
+        BriefSize: row.BriefSize || "",
+        BriefTexture: row.BriefTexture || "",
+        BriefScent: row.BriefScent || "",
+        BriefColor: row.BriefColor || "",
+        BriefExtracts: row.BriefExtracts || "",
+        BriefAvoid: row.BriefAvoid || "",
+        BriefConcept: row.BriefConcept || "",
+        Brief: row.Brief || "",
+        DateReceived: row.DateReceived || iso(today()),
+        DueDate: row.DueDate || iso(today()),
+        Stage: row.Stage || stages[0],
+        LastUpdated: row.LastUpdated || "",
+        Owner: row.Owner || "",
+        Logs: Array.isArray(row.Logs) ? row.Logs : [],
+        Requests: Array.isArray(row.Requests) ? row.Requests : []
+      })).filter((row) => row.ProjectID);
+    }
+    function save() {
+      localStorage.setItem(storageKey, JSON.stringify(projects));
+      localStorage.setItem(userKey, JSON.stringify(users));
+    }
+    function normalizePhone(phone) { return String(phone || "").replace(/\D/g, ""); }
+    function daysLeft(project) { return Math.ceil((new Date(project.DueDate) - today()) / 86400000); }
+    function visibleProjects() {
+      return projects
+        .filter((project) => currentUser.Role !== "CUSTOMER" || normalizePhone(project.CustomerPhone) === normalizePhone(currentUser.CustomerPhone))
+        .sort((a, b) => daysLeft(a) - daysLeft(b));
+    }
+
+    async function login(username, password) {
+      const PasswordHash = await sha256(password);
+      if (API_URL) {
+        const data = await api("login", { Username: username, PasswordHash });
+        currentUser = normalizeUser(data.user);
+        projects = normalizeProjects(data.projects || []);
+        users = (data.users || []).map(normalizeUser);
+      } else {
+        if (!users.length) {
+          users = [{ Username: username, PasswordHash, Role: "MD", CustomerPhone: "" }];
+          save();
+        }
+        users = users.map(normalizeUser);
+        currentUser = users.find((user) => user.Username === username && user.PasswordHash === PasswordHash);
+        if (!currentUser) throw new Error("login failed");
+      }
+      sessionStorage.setItem(sessionKey, JSON.stringify(currentUser));
+      render();
+    }
+
+    function render() {
+      $("loginScreen").classList.toggle("hidden", !!currentUser);
+      $("app").classList.toggle("hidden", !currentUser);
+      if (!currentUser) return;
+      $("userLine").textContent = `${currentUser.Username} · ${currentUser.Role}`;
+      $("manageBtn").classList.toggle("hidden", currentUser.Role === "CUSTOMER");
+      renderBoard();
+      renderManageAccess();
+      renderUsers();
+      renderApprovals();
+    }
+
+    function renderManageAccess() {
+      const projectAccess = canManageProjects();
+      const userAccess = canManageUsers();
+      const approvalAccess = ["MM", "MD"].includes(currentUser.Role);
+      $("projectTab").classList.toggle("hidden", !projectAccess);
+      $("projectTabBtn").classList.toggle("hidden", !projectAccess);
+      $("userTab").classList.toggle("hidden", !userAccess);
+      $("userTabBtn").classList.toggle("hidden", !userAccess);
+      $("approvalTab").classList.toggle("hidden", !approvalAccess);
+      $("approvalTabBtn").classList.toggle("hidden", !approvalAccess);
+      $("accountInfo").textContent = `${currentUser.Username} · ${currentUser.Role}`;
+      if (document.querySelector(".tab.active.hidden")) {
+        showTab(projectAccess ? "projectTab" : userAccess ? "userTab" : approvalAccess ? "approvalTab" : "accountTab");
+      }
+      if (![...document.querySelectorAll(".tab")].some((tab) => tab.classList.contains("active") && !tab.classList.contains("hidden"))) {
+        showTab(projectAccess ? "projectTab" : userAccess ? "userTab" : approvalAccess ? "approvalTab" : "accountTab");
+      }
+    }
+
+    function renderBoard() {
+      const rows = visibleProjects();
+      $("board").innerHTML = stages.map((stage) => {
+        const cards = rows.filter((project) => project.Stage === stage);
+        return `<section class="column" ondragover="event.preventDefault()" ondrop="dropProject(event, '${stage}')">
+          <h2>${stage}<span class="muted">${cards.length}</span></h2>
+          <div class="drop">${cards.length ? cards.map(cardHtml).join("") : `<div class="muted">ไม่มีงาน</div>`}</div>
+        </section>`;
+      }).join("");
+    }
+
+    function cardHtml(project) {
+      return `<article class="card" draggable="${canDragTo(project.Stage)}" ondragstart="dragProject(event, '${escapeAttr(project.ProjectID)}')" onclick="openProject('${escapeAttr(project.ProjectID)}')" style="--stage-color:${stageColors[project.Stage]}">
+        <div class="topline">
+          <div>
+            <div class="project-id">${escapeHtml(project.ProjectID)}</div>
+            <div class="client">${escapeHtml(project.ProjectName)}</div>
+          </div>
+          <div class="days">${escapeHtml(project.ClientName)}</div>
+        </div>
+      </article>`;
+    }
+
+    window.dragProject = (event, projectId) => event.dataTransfer.setData("text/plain", projectId);
+    window.dropProject = async (event, stage) => {
+      const projectId = event.dataTransfer.getData("text/plain");
+      const project = projects.find((item) => item.ProjectID === projectId);
+      if (!project || project.Stage === stage || !canDragTo(stage)) return;
+      if (currentUser.Role === "MM" && stage === "สิ้นสุดโปรเจค") return addRequest(project, stage);
+      project.Stage = stage;
+      project.LastUpdated = new Date().toISOString();
+      save();
+      render();
+      await api("moveStage", { ProjectID: projectId, Stage: stage }).catch(() => alert("sync status ไม่สำเร็จ"));
+    };
+
+    function addRequest(project, stage) {
+      const request = {
+        RequestID: crypto.randomUUID(),
+        FromStage: project.Stage,
+        ToStage: stage,
+        RequestedBy: currentUser.Username,
+        RequestedAt: new Date().toISOString(),
+        Status: "Pending"
+      };
+      project.Requests = [request, ...(project.Requests || [])];
+      save();
+      render();
+      api("requestStatus", { ProjectID: project.ProjectID, ...request }).catch(() => alert("sync request ไม่สำเร็จ"));
+    }
+
+    window.openProject = (projectId) => {
+      const project = projects.find((item) => item.ProjectID === projectId);
+      if (!project) return;
+      if (!canReadBrief(project)) return alert("ไม่มีสิทธิ์อ่านรายละเอียดโปรเจคนี้");
+      $("detailDialog").innerHTML = `<div class="dialog-head">
+        <strong>${escapeHtml(project.ProjectID)} · ${escapeHtml(project.ProjectName)}</strong>
+        <button onclick="detailDialog.close()">ปิด</button>
+      </div>
+        <div class="grid" style="--stage-color:${stageColors[project.Stage]}">
+        <span class="badge">${escapeHtml(project.Stage)}</span>
+        <div class="client">${escapeHtml(project.ClientName)}</div>
+        <ul id="briefView" class="brief-list">${briefSections(project)}</ul>
+        <div class="muted">ผู้ติดต่อ: ${escapeHtml(project.ContactName || "-")} | โทร: ${escapeHtml(project.CustomerPhone || "-")}</div>
+        <div class="muted">ที่อยู่: ${escapeHtml(project.CustomerAddress || "-")}</div>
+        <div class="muted">รับงาน: ${escapeHtml(project.DateReceived)} | ส่ง: ${escapeHtml(project.DueDate)} | Owner: ${escapeHtml(project.Owner || "-")}</div>
+        <div class="actions ${canManageProjects() ? "" : "hidden"}">
+          <button onclick="editProject('${escapeAttr(project.ProjectID)}')">แก้ไขข้อมูลโปรเจค</button>
+          <button class="danger" onclick="deleteProject('${escapeAttr(project.ProjectID)}')">ลบโปรเจค</button>
+        </div>
+        <div class="log-form ${canLog() ? "" : "hidden"}">
+          <input id="logDate" type="date" value="${iso(today())}">
+          <input id="logNote" placeholder="วันนี้ RD ทำอะไรไปแล้วบ้าง">
+          <input id="logImage" type="file" accept="image/*">
+          <button onclick="addLog('${escapeAttr(project.ProjectID)}')">เพิ่มบันทึก</button>
+        </div>
+        <div class="timeline">${(project.Logs || []).length ? project.Logs.map(logHtml).join("") : `<div class="muted">ยังไม่มีบันทึก RD</div>`}</div>
+      </div>`;
+      detailDialog.showModal();
+    };
+
+    function canReadBrief(project) {
+      if (!currentUser) return false;
+      if (["MM", "MD", "CS"].includes(currentUser.Role)) return true;
+      if (currentUser.Role === "RD") return project.Owner === currentUser.Username;
+      if (currentUser.Role === "CUSTOMER") return normalizePhone(project.CustomerPhone) === normalizePhone(currentUser.CustomerPhone);
+      return false;
+    }
+
+    function briefSections(project) {
+      return briefFields.map(([key, label]) => `<li><span class="brief-title">${escapeHtml(label)}:</span> ${escapeHtml(project[key] || "-")}</li>`).join("");
+    }
+
+    window.addLog = async (projectId) => {
+      const project = projects.find((item) => item.ProjectID === projectId);
+      const note = $("logNote").value.trim();
+      if (!project || !note) return;
+      const image = await readImage($("logImage").files[0]);
+      const log = { Date: $("logDate").value || iso(today()), Note: note, Image: image, Owner: currentUser.Username };
+      project.Logs = [log, ...(project.Logs || [])];
+      project.LastUpdated = new Date().toISOString();
+      save();
+      openProject(projectId);
+      render();
+      await api("addLog", { ProjectID: projectId, ...log }).catch(() => alert("sync log ไม่สำเร็จ"));
+    };
+
+    window.editProject = (projectId) => {
+      const project = projects.find((item) => item.ProjectID === projectId);
+      if (!project || !canManageProjects()) return;
+      $("projectId").value = project.ProjectID;
+      $("projectName").value = project.ProjectName;
+      $("clientName").value = project.ClientName;
+      $("contactName").value = project.ContactName;
+      $("customerPhone").value = project.CustomerPhone;
+      $("customerAddress").value = project.CustomerAddress;
+      $("owner").value = project.Owner;
+      $("dateReceived").value = project.DateReceived;
+      $("dueDate").value = project.DueDate;
+      $("stage").value = project.Stage;
+      $("brief").value = project.Brief;
+      briefFields.forEach(([key]) => {
+        const input = $(`brief${key.replace("Brief", "")}`);
+        if (input) input.value = project[key] || "";
+      });
+      detailDialog.close();
+      showTab("projectTab");
+      manageDialog.showModal();
+    };
+
+    window.deleteProject = async (projectId) => {
+      if (!canManageProjects() || !confirm("ลบโปรเจคนี้?")) return;
+      projects = projects.filter((project) => project.ProjectID !== projectId);
+      save();
+      detailDialog.close();
+      render();
+      await api("deleteProject", { ProjectID: projectId }).catch(() => alert("sync delete ไม่สำเร็จ"));
+    };
+
+    function logHtml(log) {
+      return `<div class="log-item"><div class="muted">${escapeHtml(log.Date)} · ${escapeHtml(log.Owner || "")}</div><div class="brief">${escapeHtml(log.Note)}</div>${log.Image ? `<img alt="log image" src="${escapeAttr(log.Image)}" style="max-width:100%;border-radius:10px;margin-top:6px">` : ""}</div>`;
+    }
+
+    function readImage(file) {
+      if (!file) return Promise.resolve("");
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderUsers() {
+      $("userTab").classList.toggle("hidden", !canManageUsers());
+      renderRoleOptions();
+      $("userList").innerHTML = users.map((user) => `<div class="request">${escapeHtml(user.Username)} · ${escapeHtml(user.Role)} ${user.CustomerPhone ? `· ${escapeHtml(user.CustomerPhone)}` : ""}</div>`).join("");
+    }
+
+    function creatableRoles() {
+      if (currentUser?.Role === "RD") return ["CS"];
+      if (currentUser?.Role === "MM") return ["RD", "CS"];
+      if (currentUser?.Role === "MD") return ["CS", "RD", "MM", "MD"];
+      return [];
+    }
+
+    function renderRoleOptions() {
+      const selected = $("newRole").value;
+      const roles = creatableRoles();
+      $("newRole").innerHTML = roles.map((role) => `<option value="${role}">${role}</option>`).join("");
+      if (roles.includes(selected)) $("newRole").value = selected;
+    }
+
+    function renderApprovals() {
+      const requests = projects.flatMap((project) => (project.Requests || []).filter((request) => request.Status === "Pending").map((request) => ({ project, request })));
+      $("approvalList").innerHTML = requests.length ? requests.map(({ project, request }) => `<div class="request">
+        <div class="muted">${escapeHtml(project.ProjectID)} · ${escapeHtml(request.RequestedBy)}</div>
+        <div>${escapeHtml(request.FromStage)} → ${escapeHtml(request.ToStage)}</div>
+        ${canApprove(request) ? `<button onclick="approveRequest('${escapeAttr(project.ProjectID)}','${escapeAttr(request.RequestID)}')">Approve</button>` : ""}
+      </div>`).join("") : `<div class="muted">ไม่มีคำขอรอ approve</div>`;
+    }
+
+    window.approveRequest = async (projectId, requestId) => {
+      const project = projects.find((item) => item.ProjectID === projectId);
+      const request = project?.Requests?.find((item) => item.RequestID === requestId);
+      if (!project || !request || !canApprove(request)) return;
+      request.Status = "Approved";
+      request.ApprovedBy = currentUser.Username;
+      request.ApprovedAt = new Date().toISOString();
+      project.Stage = request.ToStage;
+      project.LastUpdated = new Date().toISOString();
+      save();
+      render();
+      await api("approveStatusRequest", { ProjectID: projectId, RequestID: requestId, ApprovedBy: currentUser.Role }).catch(() => alert("sync approve ไม่สำเร็จ"));
+    };
+
+    $("projectForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const existing = projects.find((item) => item.ProjectID === $("projectId").value.trim());
+      const project = {
+        ProjectID: $("projectId").value.trim(),
+        ProjectName: $("projectName").value.trim(),
+        ClientName: $("clientName").value.trim(),
+        ContactName: $("contactName").value.trim(),
+        CustomerAddress: $("customerAddress").value.trim(),
+        CustomerPhone: $("customerPhone").value.trim(),
+        BriefMoq: $("briefMoq").value.trim(),
+        BriefBudget: $("briefBudget").value.trim(),
+        BriefSize: $("briefSize").value.trim(),
+        BriefTexture: $("briefTexture").value.trim(),
+        BriefScent: $("briefScent").value.trim(),
+        BriefColor: $("briefColor").value.trim(),
+        BriefExtracts: $("briefExtracts").value.trim(),
+        BriefAvoid: $("briefAvoid").value.trim(),
+        BriefConcept: $("briefConcept").value.trim(),
+        Brief: $("brief").value.trim(),
+        DateReceived: $("dateReceived").value,
+        DueDate: $("dueDate").value,
+        Stage: $("stage").value,
+        LastUpdated: new Date().toISOString(),
+        Owner: $("owner").value.trim(),
+        Logs: existing?.Logs || [],
+        Requests: existing?.Requests || []
+      };
+      projects = existing ? projects.map((item) => item.ProjectID === project.ProjectID ? project : item) : [project, ...projects];
+      save();
+      render();
+      resetProjectForm();
+      await api("saveProject", project).catch(() => alert("sync project ไม่สำเร็จ"));
+    });
+
+    $("userForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!canManageUsers()) return;
+      if (!creatableRoles().includes($("newRole").value)) return alert("ไม่มีสิทธิ์สร้าง role นี้");
+      const user = {
+        Username: $("newUsername").value.trim(),
+        PasswordHash: await sha256($("newPassword").value),
+        Role: $("newRole").value,
+        CustomerPhone: $("newCustomerPhone").value.trim()
+      };
+      users = users.some((item) => item.Username === user.Username) ? users.map((item) => item.Username === user.Username ? user : item) : [user, ...users];
+      save();
+      renderUsers();
+      event.target.reset();
+      await api("saveUser", user).catch(() => alert("sync user ไม่สำเร็จ"));
+    });
+
+    window.generateUser = () => {
+      const first = $("newFirstName").value.trim().replace(/\s+/g, "");
+      const initial = $("newLastInitial").value.trim().slice(0, 1).toUpperCase();
+      const phone = normalizePhone($("newCustomerPhone").value);
+      const last4 = phone.slice(-4);
+      if (!first || !initial || last4.length !== 4) return alert("กรอกชื่ออังกฤษ อักษรนามสกุล และเบอร์โทรก่อน");
+      $("newUsername").value = `${first}.${initial}.${last4}`;
+      $("newPassword").value = `${$("newRole").value}${phone}`;
+    };
+
+    window.resetProjectForm = () => {
+      $("projectForm").reset();
+      $("dateReceived").value = iso(today());
+      const due = today();
+      due.setDate(due.getDate() + 14);
+      $("dueDate").value = iso(due);
+      $("stage").value = stages[0];
+    };
+
+    window.showTab = (id) => {
+      document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+      $(id).classList.add("active");
+    };
+    $("manageBtn").addEventListener("click", () => manageDialog.showModal());
+    window.logout = () => {
+      sessionStorage.removeItem(sessionKey);
+      currentUser = null;
+      manageDialog.close();
+      render();
+    };
+    $("loginForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      login($("loginUsername").value.trim(), $("loginPassword").value)
+        .catch(() => alert("Username หรือ password ไม่ถูกต้อง"));
+    });
+    $("customerLookupForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const phone = normalizePhone($("lookupPhone").value);
+      lookupCustomer(phone, !!LIFF_ID);
+    });
+
+    async function lookupCustomer(phone, rememberPhone) {
+      if (!phone) return;
+      currentUser = { Username: `Customer-${phone.slice(-4)}`, Role: "CUSTOMER", CustomerPhone: phone };
+      if (API_URL) {
+        try {
+          const data = await api("customerLookup", { CustomerPhone: phone });
+          projects = normalizeProjects(data.projects || []);
+          if (rememberPhone) localStorage.setItem(liffPhoneKey, phone);
+          sessionStorage.setItem(sessionKey, JSON.stringify(currentUser));
+          render();
+        } catch (error) {
+          currentUser = null;
+          sessionStorage.removeItem(sessionKey);
+          render();
+          alert("ไม่พบข้อมูลจากเบอร์นี้");
+        }
+      } else {
+        if (rememberPhone) localStorage.setItem(liffPhoneKey, phone);
+        sessionStorage.setItem(sessionKey, JSON.stringify(currentUser));
+        render();
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    }
+    function escapeAttr(value) { return escapeHtml(value).replace(/`/g, "&#96;"); }
+    async function startApp() {
+      stages.forEach((stage) => $("stage").insertAdjacentHTML("beforeend", `<option value="${stage}">${stage}</option>`));
+      if (!users.length && !API_URL) $("loginHint").textContent = "ครั้งแรก: username/password นี้จะถูกสร้างเป็น MD account (password ถูก hash)";
+      resetProjectForm();
+      render();
+      await initLiff();
+      render();
+    }
+    startApp();
+  </script>
+</body>
+</html>
