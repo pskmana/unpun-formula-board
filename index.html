@@ -261,7 +261,6 @@
     const oldStorageKey = "unpun-formula-projects-v1";
     const userKey = "unpun-formula-users-v1";
     const sessionKey = "unpun-formula-session";
-    const liffPhoneKey = "unpun-liff-customer-phone";
     const $ = (id) => document.getElementById(id);
     const today = () => new Date(new Date().toDateString());
     const iso = (date) => date.toISOString().slice(0, 10);
@@ -344,11 +343,8 @@
         if (API_URL && liffProfile?.userId && lineAccessToken) {
           await loginWithLine().catch(() => {});
         }
-        const phone = normalizePhone(new URLSearchParams(location.search).get("phone")) || localStorage.getItem(liffPhoneKey);
-        if (!currentUser && phone) {
-          $("lookupPhone").value = phone;
-          await lookupCustomer(phone, true);
-        }
+        const phone = normalizePhone(new URLSearchParams(location.search).get("phone"));
+        if (!currentUser && phone) $("lookupPhone").value = phone;
       } catch (error) {
         $("loginHint").textContent = "เปิดผ่าน LINE ได้ แต่ยังเชื่อม LIFF ไม่สำเร็จ";
       }
@@ -744,17 +740,16 @@
     $("customerLookupForm").addEventListener("submit", (event) => {
       event.preventDefault();
       const phone = normalizePhone($("lookupPhone").value);
-      lookupCustomer(phone, !!LIFF_ID);
+      lookupCustomer(phone);
     });
 
-    async function lookupCustomer(phone, rememberPhone) {
+    async function lookupCustomer(phone) {
       if (!phone) return;
       currentUser = { Username: `Customer-${phone.slice(-4)}`, Role: "CUSTOMER", CustomerPhone: phone };
       if (API_URL) {
         try {
           const data = await api("customerLookup", { CustomerPhone: phone });
           projects = normalizeProjects(data.projects || []);
-          if (rememberPhone) localStorage.setItem(liffPhoneKey, phone);
           sessionStorage.setItem(sessionKey, JSON.stringify(currentUser));
           render();
         } catch (error) {
@@ -764,7 +759,6 @@
           alert("ไม่พบข้อมูลจากเบอร์นี้");
         }
       } else {
-        if (rememberPhone) localStorage.setItem(liffPhoneKey, phone);
         sessionStorage.setItem(sessionKey, JSON.stringify(currentUser));
         render();
       }
