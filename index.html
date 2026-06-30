@@ -111,6 +111,13 @@
       padding: 16px;
     }
     .grid { display: grid; gap: 8px; }
+    .lookup-submit {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      min-height: 48px;
+      white-space: nowrap;
+    }
     .form-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
     label { color: var(--muted); display: grid; font-size: 12px; gap: 4px; }
     dialog {
@@ -152,7 +159,7 @@
     <form id="customerLookupForm" class="grid" style="margin-top:16px">
       <div class="muted">ลูกค้าตรวจ progress ด้วยเบอร์โทรที่ลงทะเบียนไว้</div>
       <label>เบอร์โทร<input id="lookupPhone" inputmode="tel" placeholder="0998213209"></label>
-      <button type="submit">ดู Progress</button>
+      <button class="lookup-submit" type="submit">ดู Progress</button>
     </form>
   </section>
 
@@ -531,7 +538,7 @@
     function canReadBrief(project) {
       if (!currentUser) return false;
       if (["MM", "MD", "CS"].includes(currentUser.Role)) return true;
-      if (currentUser.Role === "RD") return project.Owner === currentUser.Username;
+      if (currentUser.Role === "RD") return true;
       if (currentUser.Role === "CUSTOMER") return project.ClientCode === currentUser.ClientCode || normalizePhone(project.CustomerPhone) === normalizePhone(currentUser.CustomerPhone);
       return false;
     }
