@@ -387,6 +387,7 @@
     function visibleProjects() {
       return projects
         .filter((project) => currentUser.Role !== "CUSTOMER" || project.ClientCode === currentUser.ClientCode || normalizePhone(project.CustomerPhone) === normalizePhone(currentUser.CustomerPhone))
+        .filter((project) => currentUser.Role !== "RD" || project.Owner === currentUser.Username)
         .sort((a, b) => daysLeft(a) - daysLeft(b));
     }
 
@@ -534,7 +535,7 @@
     function canReadBrief(project) {
       if (!currentUser) return false;
       if (["MM", "MD", "CS"].includes(currentUser.Role)) return true;
-      if (currentUser.Role === "RD") return true;
+      if (currentUser.Role === "RD") return project.Owner === currentUser.Username;
       if (currentUser.Role === "CUSTOMER") return project.ClientCode === currentUser.ClientCode || normalizePhone(project.CustomerPhone) === normalizePhone(currentUser.CustomerPhone);
       return false;
     }

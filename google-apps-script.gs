@@ -150,6 +150,7 @@ function saveUser_(user) {
 function visibleProjects_(user) {
   const rows = listProjects_();
   if (role_(user) === 'CUSTOMER') return rows.filter(project => project.ClientCode && project.ClientCode === user.ClientCode);
+  if (role_(user) === 'RD') return rows.filter(project => project.Owner === user.Username);
   return rows;
 }
 function customerProjects_(phone) {
