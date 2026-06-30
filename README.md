@@ -11,7 +11,7 @@ Single-page dashboard สำหรับ Track งานพัฒนาสูต
 `Projects`
 
 ```text
-ProjectID, ProjectName, ClientName, ContactName, CustomerAddress, CustomerPhone, BriefMoq, BriefBudget, BriefSize, BriefTexture, BriefScent, BriefColor, BriefExtracts, BriefAvoid, BriefConcept, Brief, DateReceived, DueDate, Stage, LastUpdated, Owner
+ProjectID, ProjectName, ClientName, ClientCode, ContactName, CustomerAddress, CustomerPhone, BriefMoq, BriefBudget, BriefSize, BriefTexture, BriefScent, BriefColor, BriefExtracts, BriefAvoid, BriefConcept, Brief, DateReceived, DueDate, Stage, LastUpdated, Owner
 ```
 
 `StageOptions`
@@ -44,10 +44,11 @@ RequestID, ProjectID, FromStage, ToStage, RequestedBy, RequestedAt, Status, Appr
 `Users`
 
 ```text
-Username, PasswordHash, Role, CustomerPhone, CreatedAt
+Username, PasswordHash, Role, LineUserID, ClientCode, CustomerPhone, CreatedAt
 ```
 
-ใช้เก็บ user ของ CS/RD/MM/MD โดยเก็บรหัสผ่านเป็น hash ไม่เก็บ password ตรง ๆ
+ใช้เก็บ user ของ CS/RD/MM/MD/CLIENT โดยเก็บรหัสผ่านเป็น hash ไม่เก็บ password ตรง ๆ
+`LineUserID` ใช้ผูกบัญชี LINE จาก LIFF กับ role จริง และ `ClientCode` ใช้กรอง project ของลูกค้า
 
 ## UX
 
