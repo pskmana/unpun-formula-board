@@ -420,6 +420,15 @@
       render();
     }
 
+    async function refreshData() {
+      if (!currentUser || !API_URL) return;
+      const data = currentUser.Role === "CUSTOMER"
+        ? await api("customerLookup", { CustomerPhone: currentUser.CustomerPhone })
+        : await api("list");
+      projects = normalizeProjects(data.projects || []);
+      if (data.users) users = data.users.map(normalizeUser);
+    }
+
     function render() {
       $("loginScreen").classList.toggle("hidden", !!currentUser);
       $("app").classList.toggle("hidden", !currentUser);
@@ -773,8 +782,8 @@
       stages.forEach((stage) => $("stage").insertAdjacentHTML("beforeend", `<option value="${stage}">${stage}</option>`));
       if (!users.length && !API_URL) $("loginHint").textContent = "ครั้งแรก: username/password นี้จะถูกสร้างเป็น MD account (password ถูก hash)";
       resetProjectForm();
-      render();
       await initLiff();
+      await refreshData().catch(() => {});
       render();
     }
     startApp();
