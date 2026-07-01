@@ -264,7 +264,7 @@
     const $ = (id) => document.getElementById(id);
     const today = () => new Date(new Date().toDateString());
     const iso = (date) => date.toISOString().slice(0, 10);
-    let currentUser = JSON.parse(sessionStorage.getItem(sessionKey) || "null");
+    let currentUser = JSON.parse(sessionStorage.getItem(sessionKey) || localStorage.getItem(sessionKey) || "null");
     let liffProfile = null;
     let lineAccessToken = "";
     let projects = normalizeProjects(JSON.parse(localStorage.getItem(storageKey) || localStorage.getItem(oldStorageKey) || "[]"));
@@ -303,6 +303,15 @@
 
     function normalizeUser(user) {
       return user ? { ...user, Role: normalizeRole(user.Role) } : user;
+    }
+    function saveSession() {
+      const value = JSON.stringify(currentUser);
+      sessionStorage.setItem(sessionKey, value);
+      localStorage.setItem(sessionKey, value);
+    }
+    function clearSession() {
+      sessionStorage.removeItem(sessionKey);
+      localStorage.removeItem(sessionKey);
     }
     currentUser = normalizeUser(currentUser);
     users = users.map(normalizeUser);
@@ -396,7 +405,7 @@
       currentUser = normalizeUser(data.user);
       projects = normalizeProjects(data.projects || []);
       users = (data.users || []).map(normalizeUser);
-      sessionStorage.setItem(sessionKey, JSON.stringify(currentUser));
+      saveSession();
       render();
     }
 
@@ -416,7 +425,7 @@
         currentUser = users.find((user) => user.Username === username && user.PasswordHash === PasswordHash);
         if (!currentUser) throw new Error("login failed");
       }
-      sessionStorage.setItem(sessionKey, JSON.stringify(currentUser));
+      saveSession();
       render();
     }
 
@@ -737,7 +746,7 @@
     };
     $("manageBtn").addEventListener("click", () => manageDialog.showModal());
     window.logout = () => {
-      sessionStorage.removeItem(sessionKey);
+      clearSession();
       currentUser = null;
       manageDialog.close();
       render();
@@ -760,16 +769,16 @@
         try {
           const data = await api("customerLookup", { CustomerPhone: phone });
           projects = normalizeProjects(data.projects || []);
-          sessionStorage.setItem(sessionKey, JSON.stringify(currentUser));
+          saveSession();
           render();
         } catch (error) {
           currentUser = null;
-          sessionStorage.removeItem(sessionKey);
+          clearSession();
           render();
           alert("ไม่พบข้อมูลจากเบอร์นี้");
         }
       } else {
-        sessionStorage.setItem(sessionKey, JSON.stringify(currentUser));
+        saveSession();
         render();
       }
     }
