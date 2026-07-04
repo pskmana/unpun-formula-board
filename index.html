@@ -341,7 +341,6 @@
       try {
         await liff.init({ liffId: LIFF_ID });
         if (!liff.isLoggedIn()) {
-          if (!currentUser) liff.login({ redirectUri: window.location.href });
           return;
         }
         liffProfile = await liff.getProfile().catch(() => null);
@@ -349,7 +348,7 @@
         if (liffProfile?.displayName && !currentUser) {
           $("loginHint").textContent = `เปิดผ่าน LINE: ${liffProfile.displayName}`;
         }
-        if (API_URL && liffProfile?.userId && lineAccessToken) {
+        if (API_URL && !currentUser && liffProfile?.userId && lineAccessToken) {
           await loginWithLine().catch(() => {});
         }
         const phone = normalizePhone(new URLSearchParams(location.search).get("phone"));
