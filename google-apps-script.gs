@@ -162,6 +162,7 @@ function listProjects_() {
   const requests = groupByProject_(readRows_(REQUESTS_SHEET), 'RequestedAt');
   return readRows_(PROJECTS_SHEET).map(project => ({
     ...project,
+    CustomerPhone: displayPhone_(project.CustomerPhone),
     DaysLeft: daysLeft_(project.DueDate),
     Logs: logs[project.ProjectID] || [],
     Requests: requests[project.ProjectID] || []
@@ -242,7 +243,7 @@ function readRows_(sheetName) {
 function writeRow_(sheetName, headers, keyHeader, keyValue, data) {
   const sheet = SpreadsheetApp.getActive().getSheetByName(sheetName);
   const row = findRow_(sheet, keyHeader, keyValue) || sheet.getLastRow() + 1;
-  headers.forEach(header => sheet.getRange(row, col_(sheet, header)).setValue(data[header] || ''));
+  headers.forEach(header => sheet.getRange(row, col_(sheet, header)).setValue(header === 'CustomerPhone' ? displayPhone_(data[header]) : data[header] || ''));
 }
 function findRow_(sheet, keyHeader, keyValue) {
   const values = sheet.getDataRange().getValues();
@@ -270,7 +271,11 @@ function normalizeCell_(value) {
   return value instanceof Date ? Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd') : value;
 }
 function normalizePhone_(phone) {
-  return String(phone || '').replace(/\D/g, '');
+  const digits = String(phone || '').replace(/\D/g, '');
+  return digits.length === 9 && /^[689]/.test(digits) ? `0${digits}` : digits;
+}
+function displayPhone_(phone) {
+  return normalizePhone_(phone) || String(phone || '');
 }
 function json_(payload) {
   return ContentService.createTextOutput(JSON.stringify(payload)).setMimeType(ContentService.MimeType.JSON);

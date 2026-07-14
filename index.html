@@ -366,7 +366,7 @@
         ClientCode: row.ClientCode || "",
         ContactName: row.ContactName || "",
         CustomerAddress: row.CustomerAddress || "",
-        CustomerPhone: row.CustomerPhone || "",
+        CustomerPhone: displayPhone(row.CustomerPhone),
         BriefMoq: row.BriefMoq || "",
         BriefBudget: row.BriefBudget || "",
         BriefSize: row.BriefSize || "",
@@ -390,7 +390,11 @@
       localStorage.setItem(storageKey, JSON.stringify(projects));
       localStorage.setItem(userKey, JSON.stringify(users));
     }
-    function normalizePhone(phone) { return String(phone || "").replace(/\D/g, ""); }
+    function normalizePhone(phone) {
+      const digits = String(phone || "").replace(/\D/g, "");
+      return digits.length === 9 && /^[689]/.test(digits) ? `0${digits}` : digits;
+    }
+    function displayPhone(phone) { return normalizePhone(phone) || String(phone || ""); }
     function daysLeft(project) { return Math.ceil((new Date(project.DueDate) - today()) / 86400000); }
     function visibleProjects() {
       return projects
